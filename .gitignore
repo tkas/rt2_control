@@ -57,6 +57,7 @@ dkms.conf
 # python venv - maybe hidden?
 astroEnv/
 .astroEnv/
+.venv/
 
 # python generated images
 python/*.png
@@ -66,3 +67,5 @@ debug.txt
 
 # database files
 *.db
+
+*.bin
