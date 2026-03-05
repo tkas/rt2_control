@@ -4,7 +4,7 @@ WEB_BIN?=/var/www/bin
 DB_DIR?=/var/lib/rt2
 DB_FILE=$(DB_DIR)/plan.db
 
-PHP_FILES=main_page.php process.php get_day_plan.php get_database.php generate_chart.php generate_timeline.php plan_to_db.php config.php connect_db.php
+PHP_FILES=*.php
 OTHER_FILES=style.css script.js
 PY_FILES=gen_obs_json.py
 
