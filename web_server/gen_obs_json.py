@@ -1,26 +1,21 @@
+
 #!/usr/bin/env python3
 
-import os
 import sys
-
-# move config for web
-base_path = "/var/www" 
-os.environ['MPLCONFIGDIR'] = os.path.join(base_path, '.cache/matplotlib')
-
+import argparse
 import datetime as dt
 import json
 import numpy as np
-import matplotlib.dates as dates
-import matplotlib.pyplot as plt
 
 import astropy.units as u
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord, get_body
 from astropy.time import Time
-# Silence astropy download logs
+# Silence astropy download logs and progress bars when run from the web
 from astropy.utils.data import conf
 conf.remote_timeout = 30
 conf.show_progress_bar = False
 
+# Visibility thresholds and observatory location
 AZ_MIN, AZ_MAX = 29, 355
 ALT_MIN, ALT_MAX = 15, 84
 ONDREJOV = EarthLocation(lat=49.9085742*u.deg, lon=14.7797511*u.deg, height=512*u.m)
@@ -37,50 +32,54 @@ def resolve_target(name, location, time):
             return None
 
 def main():
-    if len(sys.argv) < 3:
-        print(json.dumps({"error": "Usage: script.py YYYY.MM.DD Target1,Target2..."}))
-        return
+    parser = argparse.ArgumentParser(description='Compute visibility windows for targets on a given date')
+    parser.add_argument('date', help='Date in YYYY-MM-DD')
+    parser.add_argument('-s', '--solar', action='append', default=[], help='Solar target name (can be repeated)')
+    parser.add_argument('-i', '--interstellar', action='append', default=[], help='Interstellar (deep) target name (can be repeated)')
 
-    # arguments as:
-    # 2026-01-13 Sun:solar,B0329+64:deep
+    args = parser.parse_args()
 
-
-    date_str = sys.argv[1]
-    targets_input = sys.argv[2].split(',')
-    targets = [t.split(':') for t in targets_input]
+    date_str = args.date
     start_dt = dt.datetime.strptime(date_str, "%Y-%m-%d")
     obs_time = Time(start_dt)
+
+    # build targets list: solar targets from -s, deep targets from -i
+    targets = []
+    for name in args.solar:
+        targets.append((name.strip(), 'solar'))
+    for name in args.interstellar:
+        targets.append((name.strip(), 'deep'))
+
+    if not targets:
+        print(json.dumps({"error": "No targets provided"}))
+        return
 
     delta_t = np.linspace(0, 24, 24*60+1) * u.hour
     times = obs_time + delta_t
     plot_times = [start_dt + dt.timedelta(minutes=i) for i in range(len(delta_t))]
 
     output_data = []
-    plt.figure(figsize=(10, 6))
-    ax = plt.gca()
-    ax.set_xlim([plot_times[0], plot_times[-1]])
 
     for i, (name, location) in enumerate(targets):
         name = name.strip()
         target = resolve_target(name, location, obs_time)
         if not target:
             output_data.append({
-                "name" : name,
-                "windows" : "Target not found"
-                })
+                "name": name,
+                "location": location,
+                "windows": "Target not found"
+            })
             continue
 
         altaz = target.transform_to(AltAz(obstime=times, location=ONDREJOV))
         visible = (altaz.az.value > AZ_MIN) & (altaz.az.value < AZ_MAX) & \
                   (altaz.alt.value > ALT_MIN) & (altaz.alt.value < ALT_MAX)
 
-        plt.fill_between(plot_times, i, i+0.8, where=visible, alpha=0.3, label=name)
-
         # Logical window extraction
         windows = []
         is_on = False
         start_w = None
-        
+
         for t_idx, is_vis in enumerate(visible):
             if is_vis and not is_on:
                 is_on = True
@@ -88,7 +87,7 @@ def main():
             elif not is_vis and is_on:
                 is_on = False
                 windows.append([start_w, plot_times[t_idx]])
-        
+
         if is_on:
             windows.append([start_w, plot_times[-1]])
 
@@ -100,38 +99,29 @@ def main():
             if visible[0] and visible[-1]:
                 merged_start = last[0].strftime("%H:%M")
                 merged_end = first[1].strftime("%H:%M")
+                out_windows = [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows[1:-1]]
+                out_windows.append({"start": merged_start, "end": merged_end})
                 output_data.append({
-                    "name" : name,
-                    "location" : location,
-                    "windows" : [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows[1:-1]]
-                    })
-                output_data[i]["windows"].append({"start": merged_start, "end": merged_end})
+                    "name": name,
+                    "location": location,
+                    "windows": out_windows
+                })
             else:
                 output_data.append({
-                    "name" : name,
-                    "location" : location,
-                    "windows" : [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows]
+                    "name": name,
+                    "location": location,
+                    "windows": [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows]
                 })
         else:
             output_data.append({
-                    "name" : name,
-                    "location" : location,
-                    "windows" : [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows] if windows else "No visibility"
-                })
+                "name": name,
+                "location": location,
+                "windows": [{"start": w[0].strftime('%H:%M'), "end": w[1].strftime('%H:%M')} for w in windows] if windows else "No visibility"
+            })
 
-    # put 1st object top
-    ax.invert_yaxis()
+    # No plotting anymore; return JSON only
+    print(json.dumps({"date": date_str, "targets": output_data}))
 
-    plt.gca().xaxis.set_major_formatter(dates.DateFormatter('%H:%M'))
-    plt.yticks(range(len(targets)), [name for name, _ in targets])
-    plt.grid(True, alpha=0.2)
-    plt.title(f"Visibility at Ondrejov: {date_str}")
-    
-    img_name = f"plan.png"
-    #plt.savefig(img_name, dpi=100)
-    plt.close()
-
-    print(json.dumps({"date": date_str, "image": img_name, "targets": output_data}))
 
 if __name__ == "__main__":
     main()
