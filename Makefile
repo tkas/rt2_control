@@ -3,6 +3,7 @@ WEB?=/var/www/html/rt2
 WEB_BIN?=/var/www/bin
 DB_DIR?=/var/lib/rt2
 DB_FILE=$(DB_DIR)/plan.db
+VIS_DB_FILE=$(DB_DIR)/visibility.db
 
 PHP_FILES=*.php
 OTHER_FILES=style.css script.js
@@ -18,4 +19,8 @@ install:
 
 	@if [ ! -f $(DB_FILE) ]; then \
 		sqlite3 $(DB_FILE) < web_server/schema.sql; \
+	fi
+
+	@if [ ! -f $(VIS_DB_FILE) ]; then \
+		sqlite3 $(VIS_DB_FILE) < web_server/visibility_schema.sql; \
 	fi
