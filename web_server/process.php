@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         }
 
         $safe_date = escapeshellarg($date);
-        $command = "$python $gen_obs_json_py $safe_date $targetArgs 2>&1";
+        $command = "$gen_obs_json_py $safe_date $targetArgs 2>&1";
         exec($command, $output_array, $return_code);
 
         if (count($output_array) != 1 || $return_code != 0)
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
     }
 
     // Return JSON similar to the python script
-    echo json_encode(['date' => $date, 'image' => 'plan.png', 'targets' => $finalOutputTargets]);
+    echo json_encode(['date' => $date, 'targets' => $finalOutputTargets]);
 }
 else
 {
