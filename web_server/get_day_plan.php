@@ -14,17 +14,18 @@ $date = isset($_GET['date']) ? $_GET['date'] : $todayDate;
 
 try
 {
-    $sql = 'SELECT
-                object_name, 
-                strftime(\'%H:%M\', obs_start_time, \'unixepoch\', \'localtime\') AS obs_start_time, 
-                strftime(\'%H:%M\', rec_start_time, \'unixepoch\', \'localtime\') AS rec_start_time, 
-                strftime(\'%H:%M\', end_time, \'unixepoch\', \'localtime\') AS end_time,
-                date(obs_start_time, \'unixepoch\', \'localtime\') AS start_date,
-                date(end_time, \'unixepoch\', \'localtime\') AS end_date
-            FROM plan 
-            WHERE date(obs_start_time, \'unixepoch\', \'localtime\') = :date1
-            OR date(end_time, \'unixepoch\', \'localtime\') = :date2
-            ORDER BY obs_start_time ASC';
+    $sql = "SELECT
+                id,
+                object_name,
+                strftime('%H:%M', obs_start_time, 'unixepoch', 'localtime') AS obs_start_time,
+                strftime('%H:%M', rec_start_time, 'unixepoch', 'localtime') AS rec_start_time,
+                strftime('%H:%M', end_time, 'unixepoch', 'localtime') AS end_time,
+                date(obs_start_time, 'unixepoch', 'localtime') AS start_date,
+                date(end_time, 'unixepoch', 'localtime') AS end_date
+            FROM plan
+            WHERE date(obs_start_time, 'unixepoch', 'localtime') = :date1
+            OR date(end_time, 'unixepoch', 'localtime') = :date2
+            ORDER BY obs_start_time ASC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':date1', $date, PDO::PARAM_STR);
