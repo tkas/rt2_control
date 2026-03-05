@@ -92,7 +92,20 @@
         <ul id="windows-list"></ul>
         <img id="plan-graph" class="graph" src="" alt="Observation Plan">
         <img id="timeline-graph" class="graph" src="" alt="Observation Plan">
-        <ul id="plan-list"></ul>
+
+        <h3>Planned Observations</h3>
+        <table id="plan-table" style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f0f0f0;">
+                    <th>Target</th>
+                    <th>OST</th>
+                    <th>RST</th>
+                    <th>ET</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="plan-table-body"></tbody>
+        </table>
     </div>
 
     <script src="script.js"></script>
