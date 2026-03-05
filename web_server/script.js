@@ -48,34 +48,20 @@ document.getElementById('plan-form').addEventListener('submit', async function(e
         if (processData.error) throw new Error("Process Error: " + processData.error);
         if (!planData.success) throw new Error("Plan Error: " + planData.error);
 
-        const [chartRes, timelineRes] = await Promise.all([
-            fetch('generate_chart.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(processData.targets)
-            }),
-            fetch('generate_timeline.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    targetDate: targetDate, 
-                    plans: planData.data
-                })
-            })
-        ]);
+        // Generate only the chart here. Timeline & plan list will be handled
+        // by refreshDayPlan to avoid duplicate rendering logic.
+        const chartRes = await fetch('generate_chart.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(processData.targets)
+        });
 
         if (!chartRes.ok) throw new Error("Chart generation failed");
-        if (!timelineRes.ok) throw new Error("Timeline generation failed");
 
         const chartBlob = await chartRes.blob();
-        const timelineBlob = await timelineRes.blob();
 
         if (planGraph) {
             planGraph.src = URL.createObjectURL(chartBlob);
-        }
-        
-        if (timelineGraph) {
-            timelineGraph.src = URL.createObjectURL(timelineBlob);
         }
 
         const list = document.getElementById('windows-list');
@@ -132,7 +118,7 @@ document.getElementById('plan-form').addEventListener('submit', async function(e
                 fromInput.onchange = () => controlFromInput(fromSlider, fromInput, toInput, toSlider);
                 toInput.onchange = () => controlToInput(toSlider, fromInput, toInput, toSlider);
                 
-                saveBtn.addEventListener('click', () => {
+                saveBtn.addEventListener('click', async () => {
                     const currentStartUnix = baseUnixTime + (parseInt(fromSlider.value) * 60);
                     const currentEndUnix = baseUnixTime + (parseInt(toSlider.value) * 60);
 
@@ -146,48 +132,43 @@ document.getElementById('plan-form').addEventListener('submit', async function(e
                     saveBtn.innerText = "Saving...";
                     saveBtn.disabled = true;
 
-                    fetch('plan_to_db.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    })
-                    .then(res => res.json())
-                    .then(response => {
-                        if(response.success) {
-                            saveBtn.innerText = "Saved!";
-                            fromSlider.disabled = true;
-                            toSlider.disabled = true;
+                    try {
+                        const res = await fetch('plan_to_db.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const response = await res.json();
+
+                        if (response.success) {
+                            // Keep sliders enabled so user can plan additional windows.
+                            // Refresh day plan/timeline and then restore button state.
+                            try {
+                                await refreshDayPlan(targetDate);
+                            } catch (err) {
+                                console.error('Failed to refresh day plan:', err);
+                            }
+
+                            saveBtn.innerText = "Plan";
+                            saveBtn.disabled = false;
                         } else {
                             alert("Error: " + response.error);
                             saveBtn.innerText = "Plan";
                             saveBtn.disabled = false;
                         }
-                    })
-                    .catch(err => {
+                    } catch (err) {
                         console.error("Network Error:", err);
                         alert("Failed to save. Check console.");
                         saveBtn.innerText = "Plan";
                         saveBtn.disabled = false;
-                    });
+                    }
                 });
             });
         });
 
-        const planList = document.getElementById('plan-list');
-        planList.innerHTML = "";
-
-        planData.data.forEach(recording => {
-            const planLi = document.createElement('li');
-
-            const planHTML = `
-            Target: ${recording.object_name}<br>
-            OST - RST - ET<br>
-            ${recording.obs_start_time} - ${recording.rec_start_time} - ${recording.end_time}<br>
-            `;
-
-            planLi.innerHTML = planHTML;
-            planList.appendChild(planLi);
-        });
+        // Use the shared renderer for plan list + timeline.
+        await refreshDayPlan(targetDate, planData);
 
         document.getElementById('result-container').style.display = 'block';
     }
@@ -283,4 +264,95 @@ function minutesToTime(totalMin) {
     const h = Math.floor(normalized / 60).toString().padStart(2, '0');
     const m = (normalized % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
+}
+
+// Fetch and re-render the day's plan and timeline image.
+// Called after a successful "Plan" save so the UI reflects the new database state.
+async function refreshDayPlan(targetDate, planData = null) {
+    const planTableBody = document.getElementById('plan-table-body');
+    const timelineGraph = document.getElementById('timeline-graph');
+
+    // If planData wasn't provided, fetch it
+    if (!planData) {
+        const planRes = await fetch(`get_day_plan.php?date=${encodeURIComponent(targetDate)}`);
+        planData = await planRes.json();
+    }
+
+    if (!planData || !planData.success) {
+        throw new Error((planData && planData.error) || 'Failed to load day plan');
+    }
+
+    // Update the plan table
+    if (planTableBody) {
+        planTableBody.innerHTML = '';
+        planData.data.forEach(recording => {
+            const tr = document.createElement('tr');
+            tr.style.borderTop = '1px solid #ddd';
+
+            const nameTd = document.createElement('td');
+            nameTd.textContent = recording.object_name;
+
+            const ostTd = document.createElement('td');
+            ostTd.textContent = recording.obs_start_time;
+
+            const rstTd = document.createElement('td');
+            rstTd.textContent = recording.rec_start_time;
+
+            const etTd = document.createElement('td');
+            etTd.textContent = recording.end_time;
+
+            const actionTd = document.createElement('td');
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Delete';
+            delBtn.style.cursor = 'pointer';
+            delBtn.addEventListener('click', async () => {
+                if (!confirm(`Delete plan for ${recording.object_name} at ${recording.rec_start_time}?`)) return;
+                delBtn.disabled = true;
+                try {
+                    const res = await fetch('delete_plan.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: recording.id })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        // refresh table
+                        await refreshDayPlan(targetDate);
+                    } else {
+                        alert('Delete failed: ' + (data.error || 'unknown'));
+                        delBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Delete error:', err);
+                    alert('Failed to delete. See console.');
+                    delBtn.disabled = false;
+                }
+            });
+            actionTd.appendChild(delBtn);
+
+            tr.appendChild(nameTd);
+            tr.appendChild(ostTd);
+            tr.appendChild(rstTd);
+            tr.appendChild(etTd);
+            tr.appendChild(actionTd);
+
+            planTableBody.appendChild(tr);
+        });
+    }
+
+    // Regenerate the timeline image (server-side) and update the image src
+    if (timelineGraph) {
+        const timelineRes = await fetch('generate_timeline.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetDate: targetDate, plans: planData.data })
+        });
+
+        if (!timelineRes.ok) throw new Error('Timeline generation failed');
+
+        const blob = await timelineRes.blob();
+        timelineGraph.src = URL.createObjectURL(blob);
+    }
+
+    return planData;
 }
