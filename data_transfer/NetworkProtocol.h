@@ -7,9 +7,10 @@
 #define PROTOCOL_MAGIC 0xAA
 
 // packet Types
-#define PACKET_TYPE_START 0x01
-#define PACKET_TYPE_DATA  0x02
-#define PACKET_TYPE_END   0x03
+#define PACKET_TYPE_START    0x01
+#define PACKET_TYPE_DATA     0x02
+#define PACKET_TYPE_END      0x03
+#define PACKET_TYPE_INACTIVE 0x04
 
 // no padding
 #pragma pack(push, 1)
