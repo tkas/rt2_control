@@ -12,6 +12,4 @@ $localTz = new DateTimeZone('Europe/Prague');
 
 $dbPath = '/var/lib/rt2/plan.db';
 
-$visDbPath = '/var/lib/rt2/visibility.db';
-
 ?>
