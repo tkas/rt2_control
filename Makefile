@@ -1,6 +1,7 @@
 
 WEB?=/var/www/html/rt2
 WEB_BIN?=/var/www/bin
+USR_BIN?=~/bin
 DB_DIR?=/var/lib/rt2
 DB_FILE=$(DB_DIR)/plan.db
 VIS_DB_FILE=$(DB_DIR)/visibility.db
@@ -20,9 +21,9 @@ script:
 	chmod +x $(WEB_BIN)/$(PY_FILES)
 
 sun:
-	mkdir -p $(WEB_BIN)
-	cd web_server && cp -f $(SHELL_FILES) $(WEB_BIN)
-	chmod +x $(WEB_BIN)/$(SHELL_FILES)
+	mkdir -p $(USR_BIN)
+	cd web_server && cp -f $(SHELL_FILES) $(USR_BIN)
+	chmod +x $(USR_BIN)/$(SHELL_FILES)
 
 db:
 	mkdir -p $(DB_DIR)
