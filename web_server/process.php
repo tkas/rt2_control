@@ -3,6 +3,7 @@
 header('Content-Type: application/json');
 
 require_once 'config.php';
+require_once 'connect_db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
@@ -15,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         exit;
     }
 
-    // Build an array of requested targets (preserve the submitted order)
+
     $requestedTargets = [];
     foreach ($raw_targets as $target) {
         if (!isset($target['enabled'])) continue;
@@ -37,24 +38,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
     $cachedResults = [];
     $toCompute = [];
 
-    // Open visibility DB (separate DB) if available
-    $vpdo = null;
-    try {
-        if (isset($visDbPath) && !empty($visDbPath) && file_exists($visDbPath)) {
-            $vpdo = new PDO('sqlite:' . $visDbPath);
-            $vpdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        }
-    } catch (Throwable $e) {
-        // If visibility DB can't be opened, we'll just compute everything
-        // Log the error for debugging
-        file_put_contents($process_log, "Failed to open visibility DB: " . $e->getMessage() . "\n", FILE_APPEND);
-        $vpdo = null;
-    }
+    $vpdo = $pdo;
+
+    // Update the table name to match the main database structure
+    $selectSql = 'SELECT start_time, end_time FROM visibility WHERE date = :date AND target_name = :name AND is_interstellar = :is_interstellar ORDER BY start_time ASC';
+    $selectStmt = $vpdo->prepare($selectSql);
+
+    // Update the insert statement to use the main database
+    $insertSql = 'INSERT INTO visibility(date, target_name, is_interstellar, start_time, end_time) VALUES (:date, :name, :is_interstellar, :start_time, :end_time)';
+    $insertStmt = $vpdo->prepare($insertSql);
 
     if ($vpdo) {
-        $selectSql = 'SELECT start_time, end_time FROM visibility WHERE date = :date AND target_name = :name AND is_interstellar = :is_interstellar ORDER BY start_time ASC';
-        $selectStmt = $vpdo->prepare($selectSql);
-
         foreach ($requestedTargets as $t) {
             $selectStmt->bindValue(':date', $date);
             $selectStmt->bindValue(':name', $t['name']);
