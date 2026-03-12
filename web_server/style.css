@@ -12,6 +12,10 @@ h1 {
   text-align:center;
 }
 
+button {
+  cursor: pointer;
+}
+
 #windows-list li {
   margin: 1rem 0rem;
 }

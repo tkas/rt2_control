@@ -24,6 +24,7 @@ document.getElementById('plan-form').addEventListener('submit', async function(e
     e.preventDefault();
 
     const btn = document.getElementById('submit-btn');
+    
     const resultContainer = document.getElementById('result-container');
     const planGraph = document.getElementById('plan-graph');
     const timelineGraph = document.getElementById('timeline-graph');
@@ -304,7 +305,6 @@ async function refreshDayPlan(targetDate, planData = null) {
             const actionTd = document.createElement('td');
             const delBtn = document.createElement('button');
             delBtn.textContent = 'Delete';
-            delBtn.style.cursor = 'pointer';
             delBtn.addEventListener('click', async () => {
                 if (!confirm(`Delete plan for ${recording.object_name} at ${recording.rec_start_time}?`)) return;
                 delBtn.disabled = true;
