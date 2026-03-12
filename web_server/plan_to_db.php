@@ -60,7 +60,7 @@ try
         
         $conflictList = implode(', ', $conflictDetails);
         
-        throw new Exception("Time slot overlaps with: " . $conflictList);
+        throw new Exception("Time slot overlaps with: " . $conflictList . "\n" . "Warning: Recordings must have 10 minutes space between for antenna aiming.");
     }
 
     $sql = 'INSERT INTO plan(object_name, is_interstellar, obs_start_time, rec_start_time, end_time)
