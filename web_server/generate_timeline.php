@@ -69,19 +69,29 @@ imageline($image, $leftMargin, $chartBottom, $width, $chartBottom, $axisColor);
 for ($hour = 0; $hour <= 72; $hour += 2) {
     $x = $leftMargin + ($hour * 20);
     
-    if ($hour < 72) {
+    if ($hour % 24 === 0) {
+        imageline($image, $x, 0, $x, $chartBottom, $black);
+    }
+    else
+    {
         imageline($image, $x, 0, $x, $chartBottom, $gridColor);
     }
     
     imageline($image, $x, $chartBottom, $x, $chartBottom + 5, $axisColor);
 
-    $timeLabel = sprintf('%02d:00', $hour % 24);
+    $timeLabel = sprintf('%02d', $hour % 24);
     
     $textWidth = strlen($timeLabel) * 6;
     imagestring($image, 3, $x - ($textWidth / 2), $chartBottom + 10, $timeLabel, $textColor);
 }
 
-imagestring($image, 5, 15, ($rowHeight / 2) - 8, "Daily Plan", $textColor);
+// Format the start and end dates for the title
+$title = sprintf('%d. %d. - %d. %d.', $windowStart->format('j'), $windowStart->format('n'), $windowEnd->modify('-1 day')->format('j'), $windowEnd->format('n'));
+
+// Update the graph title
+imagestring($image, 5, 10, ($rowHeight / 2) - 8, $title, $textColor);
+
+$windowEnd->modify('+1 day');
 
 // Calculate pixels per second for the 72-hour timeline
 $pixelsPerSecond = $timelineWidth / (3 * 24 * 3600);
