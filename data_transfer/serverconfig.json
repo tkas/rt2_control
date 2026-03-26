@@ -1,0 +1,18 @@
+{
+    "web_url": "http://bogano/rt2/get_database.php",
+    "database": "/home/suchname/bc_thesis/data_transfer/plan.db",
+    "data_root_dir": "/var/spool",
+    "data_base_dir": "/pulsars",
+    "devices": [
+        {
+            "source": "",
+            "name": "rt1",
+            "port": 8080
+        },
+        {
+            "source": "",
+            "name": "rt2",
+            "port": 9001
+        }
+    ]
+}
