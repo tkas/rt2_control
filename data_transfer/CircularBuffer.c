@@ -24,7 +24,7 @@ int circularBufferInit(circularBuffer* buffer, int bufferSize)
         buffer->readerOffset[i] = bufferSize;
     }
 
-    buffer->writerFinished = false;
+    buffer->recordingActive = false;
 
     return 0;
 };

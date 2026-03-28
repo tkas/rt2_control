@@ -4,7 +4,7 @@
 #include <string.h>
 #include "cJSON.h"
 
-AppConfig* load_config(const char *filename) {
+AppConfig* loadConfig(const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (!fp) return NULL;
 
@@ -59,7 +59,7 @@ AppConfig* load_config(const char *filename) {
     return config;
 }
 
-int print_config(AppConfig* config) {
+int printConfig(AppConfig* config) {
     if (config == NULL) {
         fprintf(stderr, "Error: Cannot print NULL config.\n");
         return -1;

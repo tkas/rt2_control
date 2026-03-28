@@ -1,18 +1,32 @@
-#include "server.h"
 #include "config.h"
 #include "db_transfer.h"
+#include "CircularBuffer.h"
+
+typedef struct {
+
+    circularBuffer buffer;
+
+    Device deviceInfo;
+
+} BufferSession;
+
+DbItem currentRecording;
 
 AppConfig* appConfig;
 
+
+
 int main(){
 
-    appConfig = load_config("serverconfig.json");
+    appConfig = loadConfig("serverconfig.json");
 
-    print_config(appConfig);
+    printConfig(appConfig);
 
     // load config
 
     // start all r+w
+
+
 
     for (int i = 0 ; i < appConfig->deviceCount ; i++)
     {
@@ -26,6 +40,33 @@ int main(){
         checkAndUpdateDb(appConfig->database, appConfig->webURL);
 
         // check and update database
+
+        DbItem nextRecording = getDbItem(appConfig->database);
+
+        int curTime = (int)time(NULL);
+
+        if (nextRecording.id != -1)
+        {
+            printDbItem(nextRecording);
+        }
+
+        if (nextRecording.obs_start_time > curTime)
+        {
+            sleep(nextRecording.obs_start_time - curTime);
+
+            // add mutex
+            currentRecording = nextRecording;
+
+            // notify all circular buffers (recording active)
+        }
+        else if (nextRecording.rec_start_time > curTime)
+        {
+
+        }
+        else
+        {
+
+        }
 
         // check for starting / ending / canceled recordings and inform r+w
 

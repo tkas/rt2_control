@@ -17,7 +17,7 @@ typedef struct
 
     int reader_cnt; // number of registered readers
 
-    bool writerFinished;
+    bool recordingActive;
 
 } circularBuffer;
 

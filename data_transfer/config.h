@@ -13,6 +13,6 @@ typedef struct {
     int deviceCount;
 } AppConfig;
 
-AppConfig* load_config(const char *filename);
+AppConfig* loadConfig(const char *filename);
 
-int print_config(AppConfig* config);
+int printConfig(AppConfig* config);

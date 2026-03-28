@@ -1,4 +1,10 @@
+#ifndef DB_TRANSFER_C
+#define DB_TRANSFER_C
+
 #include "db_transfer.h"
+#include <sqlite3.h>
+#include <string.h>
+#include <time.h>
 
 struct MemoryStruct {
     char *memory;
@@ -141,3 +147,95 @@ int checkAndUpdateDb(char* dbFileName, char* baseURL)
         free(chunk.memory);
         curl_global_cleanup();
 }
+
+DbItem getDbItem(char* dbFileName) {
+    sqlite3 *db;
+    sqlite3_stmt *res;
+    DbItem item = {0}; // Initialize with zeros (id = 0 often indicates "not found")
+    item.id = -1;      // Using -1 as a clearer "not found" sentinel
+
+    // 1. Open database
+    if (sqlite3_open(dbFileName, &db) != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+        return item;
+    }
+
+    // 2. Prepare SQL Query
+    const char *sql = "SELECT id, object_name, is_interstellar, obs_start_time, "
+                      "rec_start_time, end_time FROM plan "
+                      "WHERE ABS(obs_start_time - ?) <= 300 "
+                      "OR ABS(rec_start_time - ?) <= 300 "
+                      "OR ABS(end_time - ?) <= 300 "
+                      "ORDER BY obs_start_time ASC LIMIT 1;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &res, 0) != SQLITE_OK) {
+        fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return item;
+    }
+
+    // 3. Bind the current time to the three '?' placeholders
+    int now = (int)time(NULL);
+    sqlite3_bind_int(res, 1, now);
+    sqlite3_bind_int(res, 2, now);
+    sqlite3_bind_int(res, 3, now);
+
+    // 4. Execute and map to struct
+    int step = sqlite3_step(res);
+    if (step == SQLITE_ROW) {
+        item.id = sqlite3_column_int(res, 0);
+        const char* name = (const char*)sqlite3_column_text(res, 1);
+        if (name)
+        {
+        // Copy the string into the fixed-size array safely
+            snprintf(item.object_name, sizeof(item.object_name), "%s", name);
+        }
+        else
+        {
+            item.object_name[0] = '\0'; // Empty string if NULL
+        }
+        
+        item.is_interstellar = sqlite3_column_int(res, 2);
+        item.obs_start_time = sqlite3_column_int(res, 3);
+        item.rec_start_time = sqlite3_column_int(res, 4);
+        item.end_time = sqlite3_column_int(res, 5);
+    }
+
+    // 5. Cleanup
+    sqlite3_finalize(res);
+    sqlite3_close(db);
+
+    return item;
+}
+
+void printLocalTime(int timestamp) {
+    // 1. Convert int to time_t
+    time_t raw_time = (time_t)timestamp;
+    
+    // 2. Convert to broken-down time struct (local timezone)
+    struct tm *time_info = localtime(&raw_time);
+
+    // 3. Format the time into a string
+    char buffer[80];
+    // Format: YYYY-MM-DD HH:MM:SS
+    strftime(buffer, sizeof(buffer), "%Y.%m.%d-%H:%M", time_info);
+
+    printf("%s", buffer);
+}
+
+void printDbItem(DbItem item){
+    printf("Id: %d\n", item.id);
+    printf("Name: %s\n", item.object_name);
+    printf("Is interstellar: %d\n", item.is_interstellar);
+    printf("Observation start time:");
+    printLocalTime(item.obs_start_time);
+    printf("\n");
+    printf("Recording start time:");
+    printLocalTime(item.rec_start_time);
+    printf("\n");
+    printf("End time:");
+    printLocalTime(item.end_time);
+    printf("\n");
+}
+
+#endif
