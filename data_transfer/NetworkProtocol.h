@@ -19,10 +19,10 @@
 typedef struct {
     uint8_t magic;   // must be PROTOCOL_MAGIC
     uint8_t type;
-    uint32_t length; // size of the payload
+    uint32_t value; // size of the payload
 } ProtocolHeader;
 
-typedef struct {
+typedef struct { // legacy, start should put id into value
     uint64_t timestamp; // unix timestamp
     char name[256];
 } StartPayload;
