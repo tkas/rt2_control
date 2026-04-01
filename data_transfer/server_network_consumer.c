@@ -175,7 +175,8 @@ void* bufferNetworkConsumerThread(void* arg)
             header.type = PACKET_TYPE_END;
             header.value = 0;
             pthread_mutex_lock(&bufferSession->buffer_lock);
-            printf("Ending send for %s\n", bufferSession->recordingInfo.object_name);
+            bufferSession->buffer.readerOffset[consumerId] = bufferSession->buffer.data_head_offset;
+            // printf("Ending send for %s\n", bufferSession->recordingInfo.object_name);
             pthread_mutex_unlock(&bufferSession->buffer_lock);
 
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
