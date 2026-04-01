@@ -55,6 +55,10 @@ void* bufferProducerThread(void* arg)
             }
             // TODO: print or something for data thrown away
         }
+        else
+        {
+            pthread_cond_broadcast(&bufferSession->data_available);
+        }
 
         pthread_mutex_unlock(&bufferSession->buffer_lock);
 
