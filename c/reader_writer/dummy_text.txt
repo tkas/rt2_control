@@ -1,3 +1,0 @@
-This is a dummy file
-containing dummy text
-to test my network reader
