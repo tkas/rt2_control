@@ -10,6 +10,7 @@ CREATE TABLE db_metadata (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   version INTEGER NOT NULL DEFAULT 1
 );
+INSERT INTO db_metadata (id) VALUES (1)
 CREATE TRIGGER update_version_on_insert AFTER INSERT ON plan
 BEGIN
   UPDATE db_metadata SET version = version + 1 WHERE id = 1;
