@@ -121,7 +121,7 @@ void* bufferNetworkConsumerThread(void* arg)
 
     while (true)
     {
-        readLen = 10000;
+        readLen = DATA_PACKET_DEFAULT_SIZE;
 
         pthread_mutex_lock(&bufferSession->buffer_lock);
         bufferRecordingActive = bufferSession->buffer.recordingActive;
@@ -130,7 +130,7 @@ void* bufferNetworkConsumerThread(void* arg)
         if (!threadRecordingActive && !bufferRecordingActive) // no recording - sleep
         {
             header.type = PACKET_TYPE_INACTIVE;
-            header.value = 0;
+            header.value = htonl(0);
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
             sleep(5);
         }
@@ -140,7 +140,7 @@ void* bufferNetworkConsumerThread(void* arg)
 
             pthread_mutex_lock(&bufferSession->buffer_lock);
             printf("Starting send for %s\n", bufferSession->recordingInfo.object_name);
-            header.value = bufferSession->recordingInfo.id;
+            header.value = htonl(bufferSession->recordingInfo.id);
             pthread_mutex_unlock(&bufferSession->buffer_lock);
 
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
@@ -161,7 +161,7 @@ void* bufferNetworkConsumerThread(void* arg)
 
             pthread_mutex_unlock(&bufferSession->buffer_lock);
 
-            header.value = readLen;
+            header.value = htonl(readLen);
             // send over network
             printf("Sending %ld\n", readLen);
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
@@ -174,7 +174,7 @@ void* bufferNetworkConsumerThread(void* arg)
         else if (threadRecordingActive && !bufferRecordingActive) // end recording - send end packet, align tail to writer
         {
             header.type = PACKET_TYPE_END;
-            header.value = 0;
+            header.value = htonl(0);
             pthread_mutex_lock(&bufferSession->buffer_lock);
             bufferSession->buffer.readerOffset[consumerId] = bufferSession->buffer.data_head_offset;
             // printf("Ending send for %s\n", bufferSession->recordingInfo.object_name);
