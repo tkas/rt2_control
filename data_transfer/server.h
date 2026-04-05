@@ -8,7 +8,7 @@
 
 #define MILLISECOND 1000
 
-typedef struct {
+typedef struct bufferSession {
     circularBuffer buffer;
 
     // ALL ACCESS TO BUFFERSESSION UNDER MUTEX!

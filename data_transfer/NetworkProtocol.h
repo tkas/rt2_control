@@ -18,7 +18,7 @@
 #pragma pack(push, 1)
 
 // header
-typedef struct {
+typedef struct protocolHeader {
     uint8_t magic;   // must be PROTOCOL_MAGIC
     uint8_t type;
     uint32_t value; // size of the payload

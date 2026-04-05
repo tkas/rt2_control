@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef struct {
+typedef struct dbItem {
     int id;
     char object_name[256];
     int is_interstellar;
@@ -26,4 +26,4 @@ void printDbItem(DbItem item);
 
 DbItem getDbItemById(char* dbFileName, int id);
 
-#endif
+#endif // DB_TRANSFER_H
