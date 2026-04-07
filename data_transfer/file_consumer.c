@@ -89,6 +89,11 @@ void* bufferFileConsumerThread(void* arg)
                 availableData = circularBufferAvailableData(&bufferSession->buffer, consumerId);
             }
 
+            if (!bufferSession->buffer.recordingActive) {
+                pthread_mutex_unlock(&bufferSession->buffer_lock);
+                continue; 
+            }
+
             readLen = circularBufferReadData(&bufferSession->buffer, consumerId, readLen, &readPtr);
 
             pthread_mutex_unlock(&bufferSession->buffer_lock);
