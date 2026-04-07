@@ -155,6 +155,11 @@ void* bufferNetworkConsumerThread(void* arg)
                 availableData = circularBufferAvailableData(&bufferSession->buffer, consumerId);
             }
 
+            if (!bufferSession->buffer.recordingActive) {
+                pthread_mutex_unlock(&bufferSession->buffer_lock);
+                continue; 
+            }
+
             header.type = PACKET_TYPE_DATA;
 
             readLen = circularBufferReadData(&bufferSession->buffer, consumerId, readLen, &readPtr);
@@ -162,8 +167,6 @@ void* bufferNetworkConsumerThread(void* arg)
             pthread_mutex_unlock(&bufferSession->buffer_lock);
 
             header.value = htonl(readLen);
-            // send over network
-            printf("Sending %ld\n", readLen);
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
             sendall(client_fd, readPtr, readLen);
 
@@ -171,16 +174,45 @@ void* bufferNetworkConsumerThread(void* arg)
             circularBufferConfirmRead(&bufferSession->buffer, consumerId, readLen);
             pthread_mutex_unlock(&bufferSession->buffer_lock);
         }
-        else if (threadRecordingActive && !bufferRecordingActive) // end recording - send end packet, align tail to writer
+        else if (threadRecordingActive && !bufferRecordingActive) // end recording - drain buffer, send end packet
         {
-            header.type = PACKET_TYPE_END;
-            header.value = htonl(0);
             pthread_mutex_lock(&bufferSession->buffer_lock);
+            int availableData = circularBufferAvailableData(&bufferSession->buffer, consumerId);
+
+            // 1. Drain the remaining data in the buffer
+            while (availableData > 0)
+            {
+                size_t chunkToRead = (availableData > 1000) ? 1000 : availableData;
+                
+                readLen = circularBufferReadData(&bufferSession->buffer, consumerId, chunkToRead, &readPtr);
+                
+                pthread_mutex_unlock(&bufferSession->buffer_lock);
+                
+                if (readLen > 0)
+                {
+                    header.type = PACKET_TYPE_DATA;
+                    header.value = htonl(readLen);
+                    sendall(client_fd, (const uint8_t*)&header, sizeof(header));
+
+                    sendall(client_fd, readPtr, readLen);
+                }
+                
+                pthread_mutex_lock(&bufferSession->buffer_lock);
+                circularBufferConfirmRead(&bufferSession->buffer, consumerId, readLen);
+                
+                availableData = circularBufferAvailableData(&bufferSession->buffer, consumerId);
+            }
+
+            // 2. Align the tail to the writer
             bufferSession->buffer.readerOffset[consumerId] = bufferSession->buffer.data_head_offset;
-            // printf("Ending send for %s\n", bufferSession->recordingInfo.object_name);
             pthread_mutex_unlock(&bufferSession->buffer_lock);
 
+            // 3. Send the end packet
+            header.type = PACKET_TYPE_END;
+            header.value = htonl(0);
             sendall(client_fd, (const uint8_t*)&header, sizeof(header));
+            
+            // printf("Ending send for %s\n", bufferSession->recordingInfo.object_name);
         }
 
         threadRecordingActive = bufferRecordingActive;
