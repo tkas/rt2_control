@@ -4,7 +4,7 @@ require 'config.php';
 require 'connect_db.php';
 
 try {
-    $stmt = $db->query('SELECT * FROM plan ORDER BY rec_start_time DESC');
+    $stmt = $pdo->query('SELECT * FROM plan ORDER BY rec_start_time DESC');
     $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(['success' => true, 'data' => $plans]);
