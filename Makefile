@@ -7,7 +7,7 @@ DB_FILE=$(DB_DIR)/plan.db
 VIS_DB_FILE=$(DB_DIR)/visibility.db
 
 PHP_FILES=*.php
-OTHER_FILES=style.css script.js
+OTHER_FILES=style.css script.js history.js
 PY_FILES=gen_obs_json.py
 SHELL_FILES=daily_sun_plan.sh
 
