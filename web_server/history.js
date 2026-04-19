@@ -1,4 +1,7 @@
 let allPlans = [];
+let currentPage = 1;
+const itemsPerPage = 30;
+let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('history-table-body');
@@ -32,6 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function renderTable(filter) {
+    if (filter !== currentFilter) {
+        currentFilter = filter;
+        currentPage = 1;
+    }
+
     const tableBody = document.getElementById('history-table-body');
     tableBody.innerHTML = '';
 
@@ -44,6 +52,10 @@ function renderTable(filter) {
         if (filter === 'past') return plan.rec_start_time <= nowUnix;
         return true; // 'all'
     });
+    
+    const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const pagedPlans = filteredPlans.slice(startIndex, startIndex + itemsPerPage);
 
     if (filteredPlans.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 15px;">No recordings found for this filter.</td></tr>';
@@ -57,7 +69,7 @@ function renderTable(filter) {
     };
 
     // Build the table rows
-    filteredPlans.forEach(plan => {
+    pagedPlans.forEach(plan => {
         const tr = document.createElement('tr');
         tr.style.borderTop = '1px solid #ddd';
 
@@ -76,7 +88,7 @@ function renderTable(filter) {
         }
         else // recording
         {
-            statusHtml = '<span style="color: #06d6a0;">Currently Recording</span>';
+            statusHtml = '<span style="color: #06d6a0;">In progress</span>';
         }
 
         // Populate table cells, converting UNIX timestamps back to local browser time
@@ -91,4 +103,33 @@ function renderTable(filter) {
 
         tableBody.appendChild(tr);
     });
+
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const controls = document.getElementById('pagination-controls');
+    controls.innerHTML = '';
+
+    if (totalPages <= 1) return; // Don't show if only one page
+
+    // Previous Button
+    const prevBtn = document.createElement('button');
+    prevBtn.innerText = 'Previous';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; renderTable(currentFilter); };
+    
+    // Page Indicator
+    const info = document.createElement('span');
+    info.innerText = ` Page ${currentPage} of ${totalPages} `;
+
+    // Next Button
+    const nextBtn = document.createElement('button');
+    nextBtn.innerText = 'Next';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { currentPage++; renderTable(currentFilter); };
+
+    controls.appendChild(prevBtn);
+    controls.appendChild(info);
+    controls.appendChild(nextBtn);
 }

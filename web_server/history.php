@@ -44,6 +44,8 @@
             </tbody>
         </table>
 
+        <div id="pagination-controls"></div>
+
         <script src="history.js"></script>
     </body>
 </html>
