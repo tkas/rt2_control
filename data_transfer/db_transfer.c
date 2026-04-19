@@ -246,8 +246,16 @@ void printDbItem(DbItem item){
 DbItem getDbItemById(char* dbFileName, int id){
     sqlite3 *db;
     sqlite3_stmt *res;
-    DbItem item = {0}; // Initialize with zeros (id = 0 often indicates "not found")
-    item.id = -1;      // Using -1 as a clearer "not found" sentinel
+    DbItem item = {
+        .id = -1,
+        .object_name = "UNKNOWN",
+        .is_interstellar = 1,
+        .obs_start_time = time(NULL),
+    }; // Initialize with zeros (id = 0 often indicates "not found")
+    // Using -1 as a clearer "not found" sentinel
+
+    item.rec_start_time = item.obs_start_time;
+    item.end_time = item.rec_start_time;
 
     if (sqlite3_open(dbFileName, &db) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
