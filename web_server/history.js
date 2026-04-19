@@ -62,9 +62,22 @@ function renderTable(filter) {
         tr.style.borderTop = '1px solid #ddd';
 
         const isFuture = plan.rec_start_time > nowUnix;
-        const statusHtml = isFuture 
-            ? '<span style="color: #25daa5; font-weight: bold;">Upcoming</span>' 
-            : '<span style="color: gray;">Completed</span>';
+        const isPast = plan.end_time < nowUnix;
+
+        let statusHtml;
+
+        if (isFuture)
+        {
+            statusHtml = '<span style="color: #ffc43d; font-weight: bold;">Upcoming</span>';
+        }
+        else if (isPast)
+        {
+            statusHtml = '<span style="color: gray;">Completed</span>';
+        }
+        else // recording
+        {
+            statusHtml = '<span style="color: #06d6a0;">Currently Recording</span>';
+        }
 
         // Populate table cells, converting UNIX timestamps back to local browser time
         tr.innerHTML = `
