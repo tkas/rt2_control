@@ -1,6 +1,6 @@
 let allPlans = [];
 let currentPage = 1;
-const itemsPerPage = 30;
+const itemsPerPage = window.APP_CONFIG ? window.APP_CONFIG.itemsPerPage : 30;
 let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -9,4 +9,5 @@ $localTz = new DateTimeZone('Europe/Prague');
 
 $dbPath = '/var/lib/rt2/plan.db';
 
+$itemsPerPage = 30;
 ?>

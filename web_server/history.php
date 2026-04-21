@@ -1,3 +1,5 @@
+<?php require_once 'config.php'; ?>
+
 <html>
     <head>
         <link rel="stylesheet" href="style.css">
@@ -45,6 +47,12 @@
         </table>
 
         <div id="pagination-controls"></div>
+
+        <script>
+            window.APP_CONFIG = {
+                itemsPerPage: <?php echo intval($itemsPerPage); ?>
+            };
+        </script>
 
         <script src="history.js"></script>
     </body>
