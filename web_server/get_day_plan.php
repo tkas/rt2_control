@@ -36,9 +36,26 @@ try
     
     $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $sqlFuture = "SELECT
+                    id,
+                    object_name,
+                    obs_start_time,
+                    rec_start_time,
+                    end_time
+                  FROM plan
+                  WHERE date(obs_start_time, 'unixepoch', 'localtime') > :endDate
+                  ORDER BY obs_start_time ASC
+                  LIMIT 10";
+                  
+    $stmtFuture = $pdo->prepare($sqlFuture);
+    $stmtFuture->bindValue(':endDate', $endDate, PDO::PARAM_STR);
+    $stmtFuture->execute();
+    $futurePlans = $stmtFuture->fetchAll(PDO::FETCH_ASSOC);
+
     echo json_encode([
         'success' => true,
-        'data' => $plans
+        'data' => $plans,
+        'future' => $futurePlans
     ]);
 }
 catch (Throwable $e)

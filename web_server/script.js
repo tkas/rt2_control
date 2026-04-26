@@ -287,7 +287,12 @@ async function refreshDayPlan(targetDate, planData = null) {
     // Update the plan table
     if (planTableBody) {
         planTableBody.innerHTML = '';
-        planData.data.forEach(recording => {
+        const combinedPlans = [
+            ...planData.data,
+            ...planData.future
+        ];
+        
+        combinedPlans.forEach(recording => {
             const tr = document.createElement('tr');
             tr.style.borderTop = '1px solid #ddd';
 
