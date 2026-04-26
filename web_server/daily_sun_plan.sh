@@ -33,7 +33,7 @@ else
             MESSAGE="Failed to parse times: $START - $END"
         else
             # plan_to_db.php
-            JSON_PAYLOAD='{"object_name":"Sun","location":"solar","rec_start_time":'$START_UNIX',"end_time":'$END_UNIX'}'
+            JSON_PAYLOAD='{"object_name":"Sun","location":"solar","rec_start_time":'$START_UNIX',"end_time":'$END_UNIX',"record":0}'
             RESULT=$(curl -s -X POST -H "Content-Type: application/json" -d "$JSON_PAYLOAD" $WEB_URL/plan_to_db.php)
 
             PLAN_SUCCESS=$(echo $RESULT | jq -r '.success // false')

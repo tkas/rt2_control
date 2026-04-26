@@ -18,6 +18,8 @@ try
     $objectName = $input['object_name'];
     $location = $input['location'];
 
+    $record = isset($input['record']) ? (int)$input['record'] : 1;
+
     $isInterstellar = ($location === 'solar') ? 0 : 1;
 
     $recStartTime = (int)$input['rec_start_time']; 
@@ -68,8 +70,8 @@ try
         throw new Exception("Time slot overlaps with: " . $conflictList . "\n" . "Warning: Recordings must have 10 minutes space between for antenna aiming.");
     }
 
-    $sql = 'INSERT INTO plan(object_name, is_interstellar, obs_start_time, rec_start_time, end_time)
-            VALUES(:object_name, :is_interstellar, :obs_start_time, :rec_start_time, :end_time)';
+    $sql = 'INSERT INTO plan(object_name, is_interstellar, obs_start_time, rec_start_time, end_time, record)
+            VALUES(:object_name, :is_interstellar, :obs_start_time, :rec_start_time, :end_time, :record)';
 
     $stmt = $pdo->prepare($sql);
 
@@ -78,6 +80,7 @@ try
     $stmt->bindValue(':obs_start_time', $obsStartTime);
     $stmt->bindValue(':rec_start_time', $recStartTime);
     $stmt->bindValue(':end_time', $endTime);
+    $stmt->bindvalue(':record', $record);
 
     $stmt->execute();
 
