@@ -103,3 +103,17 @@ input[type="range"] {
   margin: 1rem;
   border: 1px solid black;
 }
+
+.filter-btn { 
+    padding: 6px 16px; 
+    margin-right: 5px; 
+    cursor: pointer; 
+    border: 1px solid #ccc;
+    background: #fff;
+}
+.filter-btn.active { 
+    font-weight: bold; 
+    background-color: #25daa5;
+    color: white;
+    border-color: #25daa5;
+}

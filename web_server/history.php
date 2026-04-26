@@ -4,21 +4,6 @@
     <head>
         <link rel="stylesheet" href="style.css">
         <title>Observations</title>
-        <style>
-            .filter-btn { 
-                padding: 6px 16px; 
-                margin-right: 5px; 
-                cursor: pointer; 
-                border: 1px solid #ccc;
-                background: #fff;
-            }
-            .filter-btn.active { 
-                font-weight: bold; 
-                background-color: #25daa5;
-                color: white;
-                border-color: #25daa5;
-            }
-        </style>
     </head>
     <body>
         <a href="index.php" style="text-decoration: none; color: #333;">&larr; Back to Planner</a>
