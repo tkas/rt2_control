@@ -93,5 +93,5 @@ foreach ($data as $index => $target) {
 
 header('Content-Type: image/png');
 imagepng($image);
-imagedestroy($image);
+unset($image);
 ?>
