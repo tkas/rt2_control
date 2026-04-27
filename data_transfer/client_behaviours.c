@@ -328,6 +328,133 @@ void* bufferFileConsumerThread(void* arg)
     return NULL;
 }
 
+void* dataProcessorThread(void* arg)
+{
+    ClientContext* ctx = (ClientContext*) arg;
+    
+    int numInputs = ctx->inputBufferCount; 
+    BufferSession** inSessions = ctx->inputBuffers;
+    BufferSession* outSession = ctx->outputBuffer;
+
+    // We need to track our reader ID and offset for EACH input buffer
+    int consumerIds[numInputs];
+    for (int i = 0; i < numInputs; i++)
+    {
+        pthread_mutex_lock(&inSessions[i]->buffer_lock);
+        consumerIds[i] = inSessions[i]->buffer.reader_cnt;
+        inSessions[i]->buffer.readerOffset[consumerIds[i]] = inSessions[i]->buffer.data_head_offset;
+        inSessions[i]->buffer.reader_cnt++;
+        pthread_mutex_unlock(&inSessions[i]->buffer_lock);
+    }
+
+    bool outRecordingActive = false;
+    size_t readLen = FILE_DEFAULT_READ_SIZE; // Or an appropriate chunk size
+    uint8_t* readPtr;
+
+    while (true)
+    {
+        bool anyInputActive = false;
+        bool anyDataAvailable = false;
+        int firstActiveIdx = -1;
+
+        // 1. Evaluate the state of all input buffers
+        for (int i = 0; i < numInputs; i++)
+        {
+            pthread_mutex_lock(&inSessions[i]->buffer_lock);
+            bool active = inSessions[i]->buffer.recordingActive;
+            int avail = circularBufferAvailableData(&inSessions[i]->buffer, consumerIds[i]);
+            pthread_mutex_unlock(&inSessions[i]->buffer_lock);
+
+            if (active || avail > 0)
+            {
+                anyDataAvailable = true;
+                if (active)
+                {
+                    anyInputActive = true;
+                    if (firstActiveIdx == -1) firstActiveIdx = i; // Catch the first active buffer
+                }
+            }
+        }
+
+        // 2. Handle Output Start (Metadata Sync)
+        if (anyDataAvailable && !outRecordingActive)
+        {
+            pthread_mutex_lock(&outSession->buffer_lock);
+            if (firstActiveIdx != -1) {
+                // Copy recording info from the first active buffer we found
+                pthread_mutex_lock(&inSessions[firstActiveIdx]->buffer_lock);
+                outSession->recordingInfo = inSessions[firstActiveIdx]->recordingInfo;
+                pthread_mutex_unlock(&inSessions[firstActiveIdx]->buffer_lock);
+            }
+            outSession->buffer.recordingActive = true;
+            outRecordingActive = true;
+            pthread_mutex_unlock(&outSession->buffer_lock);
+            printf("Processor: Started recording, synced metadata.\n");
+        }
+
+        // 3. Process Data
+        if (anyDataAvailable)
+        {
+            for (int i = 0; i < numInputs; i++)
+            {
+                pthread_mutex_lock(&inSessions[i]->buffer_lock);
+                int avail = circularBufferAvailableData(&inSessions[i]->buffer, consumerIds[i]);
+                
+                if (avail > 0)
+                {
+                    size_t chunkToRead = (avail > readLen) ? readLen : avail;
+                    size_t actuallyRead = circularBufferReadData(&inSessions[i]->buffer, consumerIds[i], chunkToRead, &readPtr);
+                    pthread_mutex_unlock(&inSessions[i]->buffer_lock);
+
+                    if (actuallyRead > 0)
+                    {
+                        // data comb logic?
+
+
+                        // Write to Output Buffer
+                        pthread_mutex_lock(&outSession->buffer_lock);
+                        size_t space = circularBufferWriterSpace(&outSession->buffer);
+                        if (space >= actuallyRead)
+                        {
+                            circularBufferMemWrite(&outSession->buffer, readPtr, actuallyRead);
+                            circularBufferConfirmWrite(&outSession->buffer, actuallyRead);
+                            pthread_cond_broadcast(&outSession->data_available);
+                        }
+                        pthread_mutex_unlock(&outSession->buffer_lock);
+
+                        // Confirm read on Input Buffer
+                        pthread_mutex_lock(&inSessions[i]->buffer_lock);
+                        circularBufferConfirmRead(&inSessions[i]->buffer, consumerIds[i], actuallyRead);
+                        pthread_mutex_unlock(&inSessions[i]->buffer_lock);
+                    }
+                }
+                else
+                {
+                    pthread_mutex_unlock(&inSessions[i]->buffer_lock);
+                }
+            }
+        } 
+        // 4. Handle Output End
+        else if (!anyInputActive && outRecordingActive)
+        {
+            pthread_mutex_lock(&outSession->buffer_lock);
+            outSession->buffer.recordingActive = false;
+            outSession->recordingInfo = (DbItem){0};
+            pthread_cond_broadcast(&outSession->data_available);
+            outRecordingActive = false;
+            pthread_mutex_unlock(&outSession->buffer_lock);
+            printf("Processor: All inputs inactive and drained. Stopped recording.\n");
+        } 
+        // 5. Idle Wait
+        else
+        {
+            // No data and no active inputs, sleep briefly to prevent CPU thrashing
+            usleep(10000); 
+        }
+    }
+
+    return NULL;
+}
 
 ssize_t recvExact(int sockfd, void *buf, size_t len)
 {

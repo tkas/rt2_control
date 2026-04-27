@@ -283,6 +283,11 @@ void parseConfigClients(cJSON* root, BufferRegistry* registry) {
             ctx->customArgs = c_args;
             thread_func = bufferFileConsumerThread;
         }
+        else if (strcmp(func_name, "data_processor") == 0)
+        {
+            ctx->customArgs = NULL;
+            thread_func = dataProcessorThread;
+        }
         else
         {
             fprintf(stderr, "Unknown function: %s\n", func_name);

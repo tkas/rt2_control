@@ -34,5 +34,6 @@ typedef struct {
 
 void* networkProducerThread(void* arg);
 void* fileConsumerThread(void* arg);
+void* dataProcessorThread(void* arg);
 
 #endif // CLIENT_BEHAVIOURS_H
