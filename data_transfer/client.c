@@ -48,7 +48,7 @@ int main(int argc, char* argv[]){
 
 void writeBufferStatusToFile(const char* filepath, BufferRegistry* registry) 
 {
-    // "w" mode overwrites the file entirely, ensuring only the latest data is kept
+    // w for overwrite
     FILE* file = fopen(filepath, "w");
     if (file == NULL) 
     {
@@ -62,15 +62,13 @@ void writeBufferStatusToFile(const char* filepath, BufferRegistry* registry)
     {
         BufferSession* session = registry->sessions[i];
         
-        // Device info is accessed outside the lock, as per your comments
         fprintf(file, "Buffer [%d]: %s\n", 
                 session->bufferId,
                 session->description ? session->description : "N/A");
 
-        // Lock the session before checking buffer state and recording info
+        // lock for recordingInfo
         pthread_mutex_lock(&session->buffer_lock);
 
-        // 1. Report Recording Status
         if (session->buffer.recordingActive) 
         {
             fprintf(file, "  Status: RECORDING\n");
@@ -85,33 +83,21 @@ void writeBufferStatusToFile(const char* filepath, BufferRegistry* registry)
             fprintf(file, "  Status: IDLE\n");
         }
 
-        // 2. Report Buffer Fullness
+        // buffer stats
         size_t capacity = session->buffer.data_len;
         fprintf(file, "  Capacity: %zu bytes\n", capacity);
         
         int active_readers = 0;
         for (int r = 0; r < session->buffer.reader_cnt; r++) 
         {
-            // Skip unused readers (unused fields are set to buffer length)
+            // unused readers
             if (session->buffer.readerOffset[r] >= capacity) 
             {
                 continue;
             }
             active_readers++;
-
-            size_t head = session->buffer.data_head_offset;
-            size_t tail = session->buffer.readerOffset[r];
             
-            // Handle circular wrap-around logic
-            size_t unread_bytes;
-            if (head >= tail) 
-            {
-                unread_bytes = head - tail;
-            } 
-            else 
-            {
-                unread_bytes = capacity - tail + head;
-            }
+            size_t unread_bytes = circularBufferAvailableData(&session->buffer, r);
 
             float fill_percentage = ((float)unread_bytes / capacity) * 100.0f;
 
@@ -126,7 +112,6 @@ void writeBufferStatusToFile(const char* filepath, BufferRegistry* registry)
 
         fprintf(file, "\n");
 
-        // Always unlock before moving to the next buffer
         pthread_mutex_unlock(&session->buffer_lock);
     }
 
